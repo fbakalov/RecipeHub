@@ -1,0 +1,174 @@
+﻿@using RecipeHub.Web.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model RecipeCreateViewModel
+
+<h2>Create Recipe</h2>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+
+    <div class="mb-3">
+        <label class="form-label">Title</label>
+        <input asp-for="Title" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Instructions</label>
+        <textarea asp-for="Instructions" class="form-control"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Category</label>
+        <select asp-for="CategoryId"
+                asp-items="Model.Categories"
+                class="form-select">
+            <option value="">-- Select Category --</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Image</label>
+        <input asp-for="Image" type="file" class="form-control" accept="image/*" />
+        <span class="text-muted small">Optional. JPG/PNG recommended.</span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Ingredients</label>
+
+        <div class="row">
+            <div class="col-md-6">
+                <input id="ingredientSearchCreate" class="form-control mb-2" placeholder="Search ingredients..." />
+
+                <ul id="availableIngredientsCreate" class="list-group overflow-auto" style="max-height:260px;">
+                    @{
+                        var selected = Model.SelectedIngredientIds ?? new List<int>();
+                        foreach (var it in Model.Ingredients)
+                        {
+                            if (!int.TryParse(it.Value, out var id)) continue;
+                            if (selected.Contains(id)) continue; // don't show already selected
+                                                                 <li class="list-group-item list-group-item-action"
+                                                                     data-id="@id"
+                                                                     title="Double-click to add"
+                                                                     style="cursor:pointer;">
+                                                                     @it.Text
+                                                                 </li>
+                            ;
+                        }
+                    }
+                </ul>
+                <small class="text-muted">Double-click an ingredient to add it to the recipe.</small>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Selected Ingredients</label>
+
+                <ul id="selectedIngredientsCreate" class="list-group mb-2" style="min-height:120px; max-height:260px; overflow:auto;">
+                    @{
+                        // render already selected chips + hidden inputs
+                        foreach (var id in Model.SelectedIngredientIds ?? new List<int>())
+                        {
+                            var item = Model.Ingredients.FirstOrDefault(x => x.Value == id.ToString());
+                            var text = item?.Text ?? id.ToString();
+                            <li class="list-group-item d-flex justify-content-between align-items-center" data-id="@id">
+                                <span>@text</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-ingredient">Remove</button>
+                                <input type="hidden" name="SelectedIngredientIds" value="@id" />
+                            </li>
+                            ;
+                        }
+                    }
+                </ul>
+
+                <small class="text-muted">Click Remove to remove from the selection.</small>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const avail = document.getElementById('availableIngredientsCreate');
+            const selList = document.getElementById('selectedIngredientsCreate');
+            const search = document.getElementById('ingredientSearchCreate');
+
+            if (!avail || !selList || !search) return;
+
+            // double-click add
+            avail.addEventListener('dblclick', (e) => {
+                const li = e.target.closest('li[data-id]');
+                if (!li) return;
+                const id = li.getAttribute('data-id');
+                const text = li.textContent.trim();
+                addSelected(id, text, 'SelectedIngredientIds');
+                li.remove();
+            });
+
+            // remove from selected
+            selList.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('remove-ingredient')) return;
+                const li = e.target.closest('li[data-id]');
+                if (!li) return;
+                const id = li.getAttribute('data-id');
+                // remove hidden input and li
+                li.remove();
+                // restore to avail list
+                const newLi = document.createElement('li');
+                newLi.className = 'list-group-item list-group-item-action';
+                newLi.style.cursor = 'pointer';
+                newLi.setAttribute('data-id', id);
+                newLi.title = 'Double-click to add';
+                newLi.textContent = textForId(id, 'create');
+                avail.prepend(newLi);
+                // remove corresponding hidden input if any (already removed by li.remove)
+                // Nothing else needed because hidden input inside li was removed
+            });
+
+            function addSelected(id, text, inputName) {
+                // prevent duplicate
+                if (selList.querySelector('li[data-id="' + id + '"]')) return;
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.setAttribute('data-id', id);
+
+                const span = document.createElement('span');
+                span.textContent = text;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-outline-danger remove-ingredient';
+                btn.textContent = 'Remove';
+
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = inputName;
+                hidden.value = id;
+
+                li.appendChild(span);
+                li.appendChild(btn);
+                li.appendChild(hidden);
+
+                selList.appendChild(li);
+            }
+
+            function textForId(id, mode) {
+                // find text from Model.Ingredients rendered in DOM or fallback
+                const option = Array.from(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Ingredients.Select(i => new { i.Value, i.Text }))))
+                    .find(x => x.Value === id);
+                return option ? option.Text : id;
+            }
+
+            // filter avail list
+            search.addEventListener('input', () => {
+                const term = search.value.trim().toLowerCase();
+                Array.from(avail.children).forEach(li => {
+                    const txt = li.textContent.toLowerCase();
+                    li.style.display = (!term || txt.includes(term)) ? '' : 'none';
+                });
+            });
+        })();
+    </script>
+}

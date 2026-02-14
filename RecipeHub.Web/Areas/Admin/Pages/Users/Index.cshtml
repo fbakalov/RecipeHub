@@ -1,0 +1,59 @@
+@page
+@model RecipeHub.Areas.Admin.Pages.Users.IndexModel
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "User Management";
+}
+
+<div class="card">
+    <div class="card-body">
+        <h2 class="card-title mb-3">User Management</h2>
+
+        <form id="searchForm" method="get" class="row g-2 mb-3">
+            <div class="col-auto">
+                <input id="searchInput" name="Search" value="@Model.Search" class="form-control" placeholder="Search by username or email..." />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <button type="button" class="btn btn-outline-secondary ms-2" onclick="document.getElementById('searchInput').value=''; document.getElementById('searchForm').submit();">Clear</button>
+            </div>
+        </form>
+
+        @if (!string.IsNullOrEmpty(Model.StatusMessage))
+        {
+            <div class="alert alert-info">@Model.StatusMessage</div>
+        }
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>UserName</th>
+                        <th>Email</th>
+                        <th style="width:220px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model.Users)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@u.UserName</td>
+                            <td class="text-muted">@u.Email</td>
+                            <td class="text-end">
+                                <form method="post" asp-page-handler="Delete" class="d-inline ms-1">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@u.Id" />
+                                    <button type="submit" class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Delete this user?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

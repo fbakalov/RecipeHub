@@ -1,0 +1,182 @@
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@model RecipeHub.Web.Models.RecipeEditViewModel
+
+<h2>Edit Recipe</h2>
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Instructions" class="form-label"></label>
+        <textarea asp-for="Instructions" class="form-control"></textarea>
+        <span asp-validation-for="Instructions" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label>Category</label>
+        <select asp-for="CategoryId"
+                asp-items="ViewBag.Categories"
+                class="form-select">
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Image</label>
+        @if (!string.IsNullOrEmpty(Model.ImagePath))
+        {
+            <div class="mb-2">
+                <img src="@Model.ImagePath" alt="Recipe image" class="img-thumbnail" style="max-height:160px;" />
+            </div>
+        }
+        <input asp-for="NewImage" type="file" class="form-control" accept="image/*" />
+        <span class="text-muted small">Upload a new image to replace the existing one.</span>
+    </div>
+
+    <div class="mb-3">
+        <label>Ingredients</label>
+
+        <div class="row">
+            <div class="col-md-6">
+                <input id="ingredientSearchEdit" class="form-control mb-2" placeholder="Search ingredients..." />
+
+                <ul id="availableIngredientsEdit" class="list-group overflow-auto" style="max-height:260px;">
+                    @{
+                        var selectedIds = Model.IngredientIds ?? new List<int>();
+                        var ingredientss = (IEnumerable<SelectListItem>)ViewBag.Ingredients;
+                        foreach (var it in ingredientss)
+                        {
+                            if (!int.TryParse(it.Value, out var id)) continue;
+                            if (selectedIds.Contains(id)) continue;
+                            <li class="list-group-item list-group-item-action"
+                                data-id="@id"
+                                title="Double-click to add"
+                                style="cursor:pointer;">
+                                @it.Text
+                            </li>
+                        }
+                    }
+                </ul>
+                <small class="text-muted">Double-click an ingredient to add it to the recipe.</small>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Selected Ingredients</label>
+
+                <ul id="selectedIngredientsEdit" class="list-group mb-2" style="min-height:120px; max-height:260px; overflow:auto;">
+                    @{
+                        var ingredients = (IEnumerable<SelectListItem>)ViewBag.Ingredients;
+                        foreach (var id in Model.IngredientIds ?? new List<int>())
+                        {
+                            var item = ingredients.FirstOrDefault(x => x.Value == id.ToString());
+                            var text = item?.Text ?? id.ToString();
+                            <li class="list-group-item d-flex justify-content-between align-items-center" data-id="@id">
+                                <span>@text</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-ingredient">Remove</button>
+                                <input type="hidden" name="IngredientIds" value="@id" />
+                            </li>
+                        }
+                    }
+                </ul>
+
+                <small class="text-muted">Click Remove to remove from the selection.</small>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+
+@* Keep a single Delete form (outside edit form) *@
+@if (ViewBag.CanDelete == true)
+{
+    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" style="display:inline;" class="mt-2">
+        <button type="submit"
+                class="btn btn-danger"
+                onclick="return confirm('Delete this recipe?')">
+            Delete
+        </button>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            const avail = document.getElementById('availableIngredientsEdit');
+            const selList = document.getElementById('selectedIngredientsEdit');
+            const search = document.getElementById('ingredientSearchEdit');
+
+            if (!avail || !selList || !search) return;
+
+            avail.addEventListener('dblclick', (e) => {
+                const li = e.target.closest('li[data-id]');
+                if (!li) return;
+                const id = li.getAttribute('data-id');
+                const text = li.textContent.trim();
+                addSelected(id, text, 'IngredientIds');
+                li.remove();
+            });
+
+            selList.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('remove-ingredient')) return;
+                const li = e.target.closest('li[data-id]');
+                if (!li) return;
+                const id = li.getAttribute('data-id');
+                li.remove();
+                const newLi = document.createElement('li');
+                newLi.className = 'list-group-item list-group-item-action';
+                newLi.style.cursor = 'pointer';
+                newLi.setAttribute('data-id', id);
+                newLi.title = 'Double-click to add';
+                newLi.textContent = textForId(id);
+                avail.prepend(newLi);
+            });
+
+            function addSelected(id, text, inputName) {
+                if (selList.querySelector('li[data-id="' + id + '"]')) return;
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.setAttribute('data-id', id);
+
+                const span = document.createElement('span');
+                span.textContent = text;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-outline-danger remove-ingredient';
+                btn.textContent = 'Remove';
+
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = inputName;
+                hidden.value = id;
+
+                li.appendChild(span);
+                li.appendChild(btn);
+                li.appendChild(hidden);
+
+                selList.appendChild(li);
+            }
+
+            function textForId(id) {
+                const arr = Array.from(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(((IEnumerable<SelectListItem>)ViewBag.Ingredients).Select(i => new { i.Value, i.Text }))));
+                const found = arr.find(x => x.Value === id);
+                return found ? found.Text : id;
+            }
+
+            search.addEventListener('input', () => {
+                const term = search.value.trim().toLowerCase();
+                Array.from(avail.children).forEach(li => {
+                    const txt = li.textContent.toLowerCase();
+                    li.style.display = (!term || txt.includes(term)) ? '' : 'none';
+                });
+            });
+        })();
+    </script>
+}

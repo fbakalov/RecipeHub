@@ -1,0 +1,102 @@
+﻿@using RecipeHub.Services.Models
+@using System.Security.Claims
+@model IEnumerable<RecipeListModel>
+
+@{
+    var q = Context.Request.Query["q"].ToString();
+    var categoryId = Context.Request.Query["categoryId"].ToString();
+    var ingredient = Context.Request.Query["ingredient"].ToString();
+    var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<h2 class="mb-4">All Recipes</h2>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-5">
+        <input name="q" value="@q" class="form-control" placeholder="Search recipes (title or ingredient)..." />
+    </div>
+    <div class="col-md-3">
+        <select name="categoryId" class="form-select" id="categoryFilter">
+            <option value="">All categories</option>
+            @if (ViewBag.Categories != null)
+            {
+                foreach (var c in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewBag.Categories)
+                {
+                    <option value="@c.Value">@c.Text</option>
+                }
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input name="ingredient" value="@ingredient" class="form-control" placeholder="Filter by ingredient..." />
+    </div>
+    <div class="col-md-1">
+        <button class="btn btn-primary w-100" type="submit">Go</button>
+    </div>
+</form>
+
+@if (Model == null || !Model.Any())
+{
+    <div class="alert alert-info">No recipes found.</div>
+}
+else
+{
+    <div class="row">
+        @foreach (var recipe in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    @if (!string.IsNullOrEmpty(recipe.ImagePath))
+                    {
+                        <img src="@recipe.ImagePath" alt="Recipe image" class="card-img-top" style="max-height:180px;object-fit:cover;" />
+                    }
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">@recipe.Title</h5>
+                            <small class="text-muted">@recipe.Category</small>
+                        </div>
+
+                        <p class="card-text text-truncate">@recipe.Instructions</p>
+
+                        <div class="mb-2">
+                            @foreach (var recIngredient in recipe.Ingredients.Take(6))
+                            {
+                                <span class="badge bg-secondary me-1">@recIngredient</span>
+                            }
+
+                            @if (recipe.Ingredients.Count() > 6)
+                            {
+                                <span class="text-muted small">+@(recipe.Ingredients.Count() - 6) more</span>
+                            }
+                        </div>
+
+                        <div class="mt-auto">
+                            <a asp-action="Details" asp-route-id="@recipe.Id" class="btn btn-primary btn-sm">View Details</a>
+
+                            @if (User.Identity != null && User.Identity.IsAuthenticated && (User.IsInRole("Admin") || currentUserId == recipe.AuthorId))
+                            {
+                                <a asp-action="Edit" asp-route-id="@recipe.Id" class="btn btn-warning btn-sm ms-1">Edit</a>
+
+                                <form asp-action="Delete" asp-route-id="@recipe.Id" method="post" class="d-inline ms-1">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this recipe?')">Delete</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function(){
+            var categoryId = '@categoryId';
+            if (categoryId) {
+                var sel = document.getElementById('categoryFilter');
+                if (sel) sel.value = categoryId;
+            }
+        })();
+    </script>
+}

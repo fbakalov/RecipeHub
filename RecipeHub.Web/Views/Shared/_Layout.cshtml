@@ -1,0 +1,97 @@
+﻿    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>@ViewData["Title"] - RecipeHub</title>
+
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    </head>
+    <body>
+        <header>
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+                <div class="container">
+
+                    <!-- Logo -->
+                    <a class="navbar-brand fw-bold" asp-controller="Recipes" asp-action="Index">
+                        🍽 RecipeHub
+                    </a>
+
+                    <!-- Mobile toggle button -->
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                            aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <!-- Navbar links -->
+                    <div class="collapse navbar-collapse" id="navbarContent">
+
+                        <!-- Left links -->
+                        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Recipes" asp-action="Index">All Recipes</a>
+                            </li>
+                            @if (User.Identity != null && User.Identity.IsAuthenticated)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Recipes" asp-action="Create">Create Recipe</a>
+                                </li>
+                            }
+                        </ul>
+
+                        <!-- Right links: authentication -->
+                        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                            @if (User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Admin"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="Admin" asp-page="/Users/Index">User Management</a>
+                                </li>
+                            }
+                            @if (User.Identity != null && User.Identity.IsAuthenticated)
+                            {
+                                <li class="nav-item">
+                                    <span class="navbar-text me-2">Hello, @User.Identity.Name!</span>
+                                </li>
+
+                                <!-- Logout -->
+                                <li class="nav-item">
+                                    <form method="post" asp-area="Identity" asp-page="/Account/Logout" class="d-inline">
+                                        <button type="submit" class="btn btn-link nav-link p-0 m-0">Logout</button>
+                                    </form>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="Identity" asp-page="/Account/Login">Login</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="Identity" asp-page="/Account/Register">Register</a>
+                                </li>
+                            }
+                        </ul>
+
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <div class="container mt-4">
+            <main role="main" class="pb-4">
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="border-top footer text-muted mt-5">
+            <div class="container text-center py-3">
+                &copy; 2026 - RecipeHub
+            </div>
+        </footer>
+
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        @await RenderSectionAsync("Scripts", required: false)
+    </body>
+    </html>
